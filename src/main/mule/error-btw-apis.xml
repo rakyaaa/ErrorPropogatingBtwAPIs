@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d899ab04-f01a-4795-b664-85a8b990a54d" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="a0af730c-3f2c-4bee-9cba-132e43d0bf85" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="30f3c3e9-5fd4-4aa3-a54c-e34894d5c3a9" responseTimeout="500000">
+		<http:request-connection host="localhost" port="8083" />
+	</http:request-config>
+	<http:listener-config name="HTTP_Listener_config2" doc:name="HTTP Listener config" doc:id="19a9a672-ae79-405f-9336-7f5931fdc96e" >
+		<http:listener-connection host="0.0.0.0" port="8083" />
+	</http:listener-config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="f4c3e14d-c7fd-4d71-b5e5-7ed19df25117" >
+		<salesforce:basic-connection username="my" password="yaja" securityToken="jncj" url="bcsjhbd" />
+	</salesforce:sfdc-config>
+	<http:request-config name="HTTP_Request_configuration1" doc:name="HTTP Request configuration" doc:id="3e7ed027-3a82-4f69-9923-c4fe2c1b53c3" >
+		<http:request-connection host="localhost" port="1202" />
+	</http:request-config>
+	<s3:config name="Amazon_S3_Configuration" doc:name="Amazon S3 Configuration" doc:id="637fe6ba-ec3b-40a8-8805-eb464931e8db" >
+		<s3:connection accessKey="muhschsdbs " secretKey="ndvchsnbcdvhs" />
+	</s3:config>
+	<flow name="error-btw-apisFlow" doc:id="bf9849da-6421-4381-9953-49508571e0ba" >
+		<http:listener doc:name="Listener" doc:id="65b74c3b-1ed8-4aff-b9f1-30d248daad5c" config-ref="HTTP_Listener_config" path="/client">
+			<http:error-response statusCode="#[payload.statusCode]">
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="7060b330-8469-442f-84bb-152462c010d8" message="Start"/>
+		<http:request method="GET" doc:name="Request" doc:id="e44d8d76-3c28-42cd-b362-0277167630a5" config-ref="HTTP_Request_configuration" path='#["/" ++ payload.server]'/>
+		<logger level="INFO" doc:name="Logger" doc:id="477099ad-dfbf-4dbe-b5d5-89947c1c72cf" message="End"/>
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ee21e5d6-4cbf-43ec-85a5-3f939f54bb3f" >
+				<ee:transform doc:name="Transform Message" doc:id="a2d335ab-4258-424a-9a49-a4bc2489e4c3">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+error.muleMessage.payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="d7f38220-6d7f-4b99-a598-26deec300c0b" message="#[payload]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="error-btw-apisFlow1" doc:id="d677b3fe-a38a-429f-9e10-c21078a81c60" >
+		<http:listener doc:name="Listener" doc:id="c25332ce-a3ee-42fb-8b40-627497253848" config-ref="HTTP_Listener_config2" path="/server1">
+			<http:error-response >
+				<http:body ><![CDATA[#[vars.errorResponse]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="fbaecbbc-de48-4da1-8683-9c36407d0881" message="Start"/>
+		<ee:transform doc:name="Transform Message" doc:id="1a41c925-47c8-41ae-8627-b0d649a2416f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{"Name":"Rakesh"} ++ "Rakesh"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="cccb5e55-223c-4b4a-bf33-78a33f4d583a" message="End"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="d728171c-38ee-407b-bfc4-dc278e30ccf5" >
+				<ee:transform doc:name="Transform Message" doc:id="caa106ce-067a-4c4a-9496-86011312dd99" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "errorConnector": error.errorType.namespace,
+    "errorType" : error.errorType.identifier,
+    "errorMessage": error.cause.message,
+    "errorDescription": error.description,
+    "statusCode" : 421
+}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="4db73383-3ba8-495d-807c-b7e4147e337c" message="#[payload]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="error-btw-apisFlow2" doc:id="e2a21621-42d2-410b-86d4-05f848bf157c" >
+		<http:listener doc:name="Listener" doc:id="55f97fc7-970a-4d56-baf4-5893015c2eb8" config-ref="HTTP_Listener_config2" path="/server2">
+			<http:error-response>
+				<http:body ><![CDATA[#[vars.errorResponse]]]></http:body>
+
+			</http:error-response>
+
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="a99da682-98ef-44f4-ac60-ff93b0b48f82" message="Start"/>
+		<salesforce:close-job doc:name="Close job" doc:id="b0a6be88-206f-4736-a77b-50d0bd51e762" config-ref="Salesforce_Config" jobId="1"/>
+		<logger level="INFO" doc:name="Logger" doc:id="2ace495d-dd88-4181-a9cf-1b47bff65dc0" message="End"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="d5ee0e41-9c85-4869-aaad-c2d4f8ff2282" >
+				<ee:transform doc:name="Transform Message" doc:id="4b24657a-6bde-4cb1-9be0-61a9facbb4c0" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "errorConnector": error.errorType.namespace,
+    "errorType" : error.errorType.identifier,
+    "errorMessage": error.cause.message,
+    "errorDescription": error.description,
+    "statusCode" : 422
+}]]></ee:set-variable>
+					</ee:variables>
+				
+</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="346c164a-a244-48be-a792-59829c4e96f9" message="#[vars.errorResponse]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+		<flow name="error-btw-apisFlow3" doc:id="f0caf4f2-8a63-4959-bc70-698552f79497" >
+		<http:listener doc:name="Listener" doc:id="48eae927-7f41-4b49-ac9c-09bcb7823be7" config-ref="HTTP_Listener_config2" path="/server3">
+			<http:error-response>
+				<http:body ><![CDATA[#[vars.errorResponse]]]></http:body>
+
+			</http:error-response>
+
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="36bf6920-3293-4389-b622-512d2f7c0d4d" message="Start"/>
+		<http:request method="GET" doc:name="Request" doc:id="c8e079bf-4b7b-4cde-8701-16fd7a71c75c" config-ref="HTTP_Request_configuration1" path="/wrong"/>
+		<logger level="INFO" doc:name="Logger" doc:id="0e681f38-e2fe-49ca-9f93-058ca0f50111" message="End"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2902ccbb-4fff-443e-b610-48266b3dbee2" >
+				<ee:transform doc:name="Transform Message" doc:id="87a4539e-7f24-4fc0-b9b9-d0af9749436c" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "errorConnector": error.errorType.namespace,
+    "errorType" : error.errorType.identifier,
+    "errorMessage": error.cause.message,
+    "errorDescription": error.description,
+    "statusCode" : 423
+}]]></ee:set-variable>
+					</ee:variables>
+				
+</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="fce0f818-347f-4315-a961-9a8ee0df8591" message="#[vars.errorResponse]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+		<flow name="error-btw-apisFlow4" doc:id="38bc17cb-c723-45d2-b751-9a51a0152168" >
+		<http:listener doc:name="Listener" doc:id="4b9f6be0-c5c6-411d-b595-000eed4709e0" config-ref="HTTP_Listener_config2" path="/server4">
+			<http:error-response>
+				<http:body ><![CDATA[#[vars.errorResponse]]]></http:body>
+
+			</http:error-response>
+
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="0492c134-c102-4d8b-bcfa-4e020f2e314e" message="Start"/>
+		<s3:get-object doc:name="Get Object" doc:id="ee6abe1e-335f-447c-bacf-5a242b1e2403" config-ref="Amazon_S3_Configuration" bucketName="fehbjh" key="sdbvsdh"/>
+		<logger level="INFO" doc:name="Logger" doc:id="4a6ad985-f969-4759-85a0-162511ec489b" message="End"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="92802e3e-6130-4f27-bfc4-b43f5546cb54" >
+				<ee:transform doc:name="Transform Message" doc:id="d5f3d20d-28be-4ca0-b58d-44a9b34c3e5b" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "errorConnector": error.errorType.namespace,
+    "errorType" : error.errorType.identifier,
+    "errorMessage": error.cause.message,
+    "errorDescription": error.description,
+    "statusCode" : 424
+}]]></ee:set-variable>
+					</ee:variables>
+				
+</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="9c812f51-c8aa-4f18-8374-1a73a4263340" message="#[vars.errorResponse]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
